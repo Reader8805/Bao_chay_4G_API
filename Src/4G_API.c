@@ -33,7 +33,7 @@ static inline void sim_writeln(UART_HandleTypeDef *uart_sim, const char *s){
  *
  * @brief						- This function wait the response of SIM through UART that connected to module 4G
  *
- * param[in]					- Address of the uart struct address
+ * param[in]					- Address of the uart struct
  * param[in]					- timeout
  *
  * @return						- timeout time
@@ -104,7 +104,7 @@ bool sim_wait_prompt(UART_HandleTypeDef *uart_sim, uint32_t max_ms){
       }
 
       if (strstr(win, "+CMS ERROR") || strstr(win, "+CME ERROR") || strstr(win, "\r\nERROR\r\n"))
-        return false; // đã có kết luận lỗi, không cần chờ thêm
+        return false;
     }
   }
   return false;
@@ -273,7 +273,6 @@ void sim_init(UART_HandleTypeDef *uart_sim){
  *
  * @brief						- This function sends pdu code through uart into module SIM
  *
- * param[in]					- Address of the uart struct address
  * param[in]					- Address of the uart struct address
  * param[in]					- Text of phone number
  * param[in]					- Text that user want to send

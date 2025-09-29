@@ -48,10 +48,8 @@ UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 const char *phone_number[] = {
-		"+84936056873",
-		"+84984467455",
-		"+84979166076",
-		"+84827402199"
+		"+84xxxxxxxxx",
+		"+8xxxxxxxxxx",
 		};
 int number_of_phone = sizeof(phone_number) / sizeof(phone_number[0]);
 const char *message = "Có cháy tại địa chỉ: \"Đại học Bách Khoa Hà Nội\"";
@@ -109,12 +107,12 @@ int main(void)
   /* USER CODE BEGIN 2 */
   sim_init(&huart1);
   for(int i = 0; i < number_of_phone; i++) {
-  send_SMS(&huart1, phone_number[i], message);
+	  send_SMS(&huart1, phone_number[i], message);
   }
  // sim_init_db(&huart1, &huart2);
 //  for(int i = 0; i < number_of_phone; i++) {
-//  send_SMS_db(&huart1, &huart2, phone_number[i], message);
-//  HAL_Delay(1000);
+//  	send_SMS_db(&huart1, &huart2, phone_number[i], message);
+//  	HAL_Delay(1000);
  //}
   /* USER CODE END 2 */
 
