@@ -1,5 +1,8 @@
 !inc/
 !src/
 
-!inc/4G_API.h
-!src/4G_API.c
+!Inc/4G_API.h
+!Src/4G_API.c
+!Src/4G_debugUART_API.c
+!Inc/4G_debugUART_API.h
+!Src/main.c
