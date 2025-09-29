@@ -1,0 +1,5 @@
+!inc/
+!src/
+
+!inc/4G_API.h
+!src/4G_API.c
