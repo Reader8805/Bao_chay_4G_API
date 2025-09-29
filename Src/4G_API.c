@@ -15,9 +15,9 @@
  * @note						- None
  */
 
-//static inline void dbg_puts(UART_HandleTypeDef *uart_dbg, const char *s){
-//  HAL_UART_Transmit(uart_dbg, (uint8_t*)s, (uint16_t)strlen(s), 100);
-//}
+static inline void dbg_puts(UART_HandleTypeDef *uart_dbg, const char *s){
+  HAL_UART_Transmit(uart_dbg, (uint8_t*)s, (uint16_t)strlen(s), 100);
+}
 
 
 /*
@@ -58,39 +58,26 @@ static inline void sim_writeln(UART_HandleTypeDef *uart_sim, const char *s){
  * @note						- None
  */
 
-void sim_wait_result(UART_HandleTypeDef *uart_sim, uint32_t total_ms)
+
+sim_res_t sim_wait_result(UART_HandleTypeDef *uart_sim, uint32_t total_ms)
 {
   uint32_t t0 = HAL_GetTick();
-  //char win[96] = {0}; size_t wr=0;
+  char win[160] = {0}; size_t wr=0;
   uint8_t b;
+
   while (HAL_GetTick() - t0 < total_ms){
-	  HAL_UART_Receive(uart_sim, &b, 1, 120);
-//    uint8_t b;
-//    if (HAL_UART_Receive(uart_sim, &b, 1, 120) == HAL_OK){
-//
-//      if (wr+1 < sizeof(win))
-//      {
-//    	  win[wr++] = (char)b; win[wr] = 0;
-//      }
-//      else {
-//    	  memmove(win, win+1, sizeof(win)-2);
-//    	  win[sizeof(win)-2]=(char)b;
-//    	  win[sizeof(win)-1]=0;
-//      }
+    if (HAL_UART_Receive(uart_sim, &b, 1, 80) == HAL_OK){
+      if (wr+1 < sizeof(win)) { win[wr++] = (char)b; win[wr] = 0; }
+      else { memmove(win, win+1, sizeof(win)-2); win[sizeof(win)-2]=(char)b; win[sizeof(win)-1]=0; }
 
-//      if (strstr(win, "\r\nOK\r\n") || strstr(win, "\nOK\r\n") || strstr(win, " OK\r\n"))
-//    	  return SIM_RES_OK;
-//      if (strstr(win, "+CME ERROR"))
-//    	  return SIM_RES_CME;
-//      if (strstr(win, "+CMS ERROR"))
-//    	  return SIM_RES_CMS;
-//      if (strstr(win, "\r\nERROR\r\n") || strstr(win, "\nERROR\r\n") || strstr(win, " ERROR\r\n"))
-//    	  return SIM_RES_ERROR;
+      if (strstr(win, "+CMGS:") || strstr(win, "\nOK")) return SIM_RES_OK;
+      if (strstr(win, "+CME ERROR")) return SIM_RES_CME;
+      if (strstr(win, "+CMS ERROR")) return SIM_RES_CMS;
+      if (strstr(win, "ERROR"))      return SIM_RES_ERROR;
     }
- // }
-  //return SIM_RES_TIMEOUT;
+  }
+  return SIM_RES_TIMEOUT;
 }
-
 
 /*
  *
@@ -98,7 +85,7 @@ void sim_wait_result(UART_HandleTypeDef *uart_sim, uint32_t total_ms)
 /***************************************************************************
  * function name:				- sim_wait_prompt
  *
- * @brief						- This function waits for the ready promt "<" of the module 4G
+ * @brief						- This function waits for the ready promt ">>" of the module 4G
  *
  * param[in]					- Address of the uart SIM struct address
  * param[in]					- timeout max
@@ -109,16 +96,25 @@ void sim_wait_result(UART_HandleTypeDef *uart_sim, uint32_t total_ms)
 
 bool sim_wait_prompt(UART_HandleTypeDef *uart_sim, uint32_t max_ms){
   uint32_t t0 = HAL_GetTick();
+  char win[96] = {0}; size_t wr = 0;
   uint8_t ch;
 
   while (HAL_GetTick() - t0 < max_ms){
+    if (HAL_UART_Receive(uart_sim, &ch, 1, 80) == HAL_OK){
+      if (ch == '>') return true;
 
-    if (HAL_UART_Receive(uart_sim, &ch, 1, 80) == HAL_OK && ch == '>')
-    	return true;
+
+      if (wr+1 < sizeof(win)) { win[wr++] = (char)ch; win[wr] = 0; }
+      else { memmove(win, win+1, sizeof(win)-2); win[sizeof(win)-2]=(char)ch; win[sizeof(win)-1]=0; }
+
+      if (strstr(win, "+CMS ERROR") || strstr(win, "+CME ERROR") || strstr(win, "\r\nERROR\r\n")){
+
+        return false;
+      }
+    }
   }
   return false;
 }
-
 /*
  *
  */
@@ -135,20 +131,19 @@ bool sim_wait_prompt(UART_HandleTypeDef *uart_sim, uint32_t max_ms){
  * @note						- None
  */
 
-void sim_cmd_expect_ok(UART_HandleTypeDef *uart_sim, /*UART_HandleTypeDef *uart_dbg, */const char *cmd, uint32_t wait_ms){
+void sim_cmd_expect_ok(UART_HandleTypeDef *uart_sim, UART_HandleTypeDef *uart_dbg, const char *cmd, uint32_t wait_ms){
   sim_writeln(uart_sim, cmd);
-  //sim_res_t r = sim_wait_result(uart_sim, wait_ms);
-  sim_wait_result(uart_sim, wait_ms);
-  //if (r == SIM_RES_OK);
-//	 // dbg_puts(uart_dbg, "OK\r\n");
-//  else if (r == SIM_RES_CME)
-//	 // dbg_puts(uart_dbg, "CME ERROR\r\n");
-//  else if (r == SIM_RES_CMS)
-//	 // dbg_puts(uart_dbg, "CMS ERROR\r\n");
-//  else if (r == SIM_RES_ERROR)
-//	 // dbg_puts(uart_dbg, "ERROR\r\n");
-//  else
-//	 // dbg_puts(uart_dbg, "TIMEOUT\r\n");
+  sim_res_t r = sim_wait_result(uart_sim, wait_ms);
+  if (r == SIM_RES_OK)
+	  dbg_puts(uart_dbg, "OK\r\n");
+  else if (r == SIM_RES_CME)
+	  dbg_puts(uart_dbg, "CME ERROR\r\n");
+  else if (r == SIM_RES_CMS)
+	  dbg_puts(uart_dbg, "CMS ERROR\r\n");
+  else if (r == SIM_RES_ERROR)
+	  dbg_puts(uart_dbg, "ERROR\r\n");
+  else
+	  dbg_puts(uart_dbg, "TIMEOUT\r\n");
 }
 
 /*
@@ -168,15 +163,18 @@ void sim_cmd_expect_ok(UART_HandleTypeDef *uart_sim, /*UART_HandleTypeDef *uart_
  */
 
 void utf8ToUcs2Hex(const char* u8, char *out_hex, size_t out_sz){
-  size_t wr=0; out_hex[0]='\0';
+  size_t wr = 0;
+  out_hex[0] ='\0';
   while (*u8 && wr+4 < out_sz){
-    uint16_t cp=0x003F; uint8_t c=(uint8_t)*u8++;
-    if (c<0x80) cp=c;
-    else if((c&0xE0)==0xC0 && (u8[0]&0xC0)==0x80){
-    	cp=((c&0x1F)<<6)|(u8[0]&0x3F); u8++;
+    uint16_t cp=0x003F;
+    uint8_t c = (uint8_t)*u8++;
+    if (c < 0x80) cp=c;
+    else if((c & 0xE0)==0xC0 && (u8[0] & 0xC0) == 0x80){
+    	cp = ((c&0x1F)<<6)|(u8[0]&0x3F);
+    	u8++;
     }
-    else if((c&0xF0)==0xE0 && (u8[0]&0xC0)==0x80 && (u8[1]&0xC0)==0x80){
-      cp=((c&0x0F)<<12)|((u8[0]&0x3F)<<6)|(u8[1]&0x3F); u8+=2;
+    else if((c & 0xF0) == 0xE0 && (u8[0] & 0xC0)==0x80 && (u8[1] & 0xC0) == 0x80){
+      cp = ((c & 0x0F) << 12)|((u8[0] & 0x3F) <<6)|(u8[1] & 0x3F); u8 += 2;
     }
     wr += (size_t)snprintf(out_hex+wr, out_sz-wr, "%04X", (unsigned)cp);
   }
@@ -278,10 +276,11 @@ void buildPDU(const char* phone, const char* text, char *out_pdu, size_t out_sz)
  */
 
 
-void sim_init(UART_HandleTypeDef *uart_sim/*, UART_HandleTypeDef *uart_dbg*/){
+void sim_init(UART_HandleTypeDef *uart_sim, UART_HandleTypeDef *uart_dbg){
   HAL_Delay(2500);
-  sim_cmd_expect_ok(uart_sim,/* uart_dbg,*/ "AT",        1500);
-  sim_cmd_expect_ok(uart_sim, /*uart_dbg,*/ "AT+CMGF=0", 1500);
+  sim_cmd_expect_ok(uart_sim, uart_dbg, "AT",        1500);
+  sim_cmd_expect_ok(uart_sim, uart_dbg, "ATE0",      1500);
+  sim_cmd_expect_ok(uart_sim, uart_dbg, "AT+CMGF=0", 1500);
 }
 
 /*
@@ -300,43 +299,43 @@ void sim_init(UART_HandleTypeDef *uart_sim/*, UART_HandleTypeDef *uart_dbg*/){
  * @return						- None
  * @note						- None
  */
-void send_SMS(UART_HandleTypeDef *uart_sim, /*UART_HandleTypeDef *uart_dbg, */const char *phone, const char *text){
-  char pdu[640]; buildPDU(phone, text, pdu, sizeof(pdu));
-  size_t total_bytes = strlen(pdu)/2;
-  if (!total_bytes)
+
+void send_SMS(UART_HandleTypeDef *uart_sim, UART_HandleTypeDef *uart_dbg, const char *phone, const char *text)
+{
+  char pdu[640];
+  buildPDU(phone, text, pdu, sizeof(pdu));
+  size_t total_bytes = strlen(pdu)/2; if (!total_bytes)
 	  return;
-  int tpdu_len = (int)(total_bytes - 1);
-  if (tpdu_len <= 0)
+  int tpdu_len = (int)(total_bytes - 1); if (tpdu_len <= 0)
 	  return;
 
-  char cmd[32];
-  snprintf(cmd, sizeof cmd, "AT+CMGS=%d", tpdu_len);
+  char cmd[32]; snprintf(cmd, sizeof cmd, "AT+CMGS=%d", tpdu_len);
   sim_writeln(uart_sim, cmd);
 
+  if (!sim_wait_prompt(uart_sim, 5000)){
+    dbg_puts(uart_dbg, "NO_PROMPT\r\n");
 
-  if (!sim_wait_prompt(uart_sim, 3000)){
-    //dbg_puts(uart_dbg, "NO_PROMPT\r\n");
+    (void)sim_wait_result(uart_sim, 3000);
+
+    sim_cmd_expect_ok(uart_sim, uart_dbg, "AT", 1000);
+    HAL_Delay(300);
     return;
   }
 
-  HAL_UART_Transmit(uart_sim, (uint8_t*)pdu, (uint16_t)strlen(pdu), 5000);
+  HAL_UART_Transmit(uart_sim, (uint8_t*)pdu, (uint16_t)strlen(pdu), 3000);
   uint8_t SUB=0x1A;
   HAL_UART_Transmit(uart_sim, &SUB, 1, 1000);
 
-  // Hiện phản hồi uart để debug
- // sim_res_t r = sim_wait_result(uart_sim, 60000);
-//  if (r == SIM_RES_OK)
-//	  dbg_puts(uart_dbg, "OK\r\n");
-//  else if (r == SIM_RES_CMS)
-//	  dbg_puts(uart_dbg, "CMS ERROR\r\n");
-//  else if (r == SIM_RES_CME)
-//	  dbg_puts(uart_dbg, "CME ERROR\r\n");
-//  else if (r == SIM_RES_ERROR)
-//	  dbg_puts(uart_dbg, "ERROR\r\n");
-//  else
-//	  dbg_puts(uart_dbg, "TIMEOUT\r\n");
-  sim_wait_result(uart_sim, 60000);
+
+  sim_res_t r = sim_wait_result(uart_sim, 15000);
+  if (r == SIM_RES_OK)          dbg_puts(uart_dbg, "OK\r\n");
+  else if (r == SIM_RES_CMS)    dbg_puts(uart_dbg, "CMS ERROR\r\n");
+  else if (r == SIM_RES_CME)    dbg_puts(uart_dbg, "CME ERROR\r\n");
+  else if (r == SIM_RES_ERROR)  dbg_puts(uart_dbg, "ERROR\r\n");
+  else                          dbg_puts(uart_dbg, "TIMEOUT\r\n");
+
+
+  uint8_t d; uint32_t t0 = HAL_GetTick();
+  while (HAL_GetTick() - t0 < 200) HAL_UART_Receive(uart_sim, &d, 1, 10);
+  HAL_Delay(300);
 }
-
-
-
